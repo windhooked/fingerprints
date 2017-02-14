@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	SobelDx = &kernel3x3{mat: [3][3]int{{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}}}
-	SobelDy = &kernel3x3{mat: [3][3]int{{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}}}
+	SobelDx = &kernel3x3{size: 3, mat: [3][3]int{{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}}}
+	SobelDy = &kernel3x3{size: 3, mat: [3][3]int{{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}}}
+	Sum9x9  = &sum9x9{size: 9}
 )
 
 type Kernel interface {
@@ -17,7 +18,12 @@ type Kernel interface {
 }
 
 type kernel3x3 struct {
-	mat [3][3]int
+	size int
+	mat  [3][3]int
+}
+
+type sum9x9 struct {
+	size int
 }
 
 func ApplyKernelAsync(in *image.Gray, out *image.Gray, kernel Kernel) *sync.WaitGroup {
@@ -54,11 +60,21 @@ func ApplyKernel(kernel Kernel, in *image.Gray, out *image.Gray) {
 	}
 }
 
-func (sk *kernel3x3) Apply(in *image.Gray, x, y int) int {
+func (k *kernel3x3) Apply(in *image.Gray, x, y int) int {
 	sum := 0
-	for i := -1; i <= 1; i++ {
+	for i := -(k.size - 1) / 2; i <= (k.size-1)/2; i++ {
 		for j := -1; j <= 1; j++ {
-			sum += sk.mat[j+1][i+1] * int(in.GrayAt(x+i, y+j).Y)
+			sum += k.mat[j+1][i+1] * int(in.GrayAt(x+i, y+j).Y)
+		}
+	}
+	return sum
+}
+
+func (k *sum9x9) Apply(in *image.Gray, x, y int) int {
+	sum := 0
+	for i := -(k.size - 1) / 2; i <= (k.size-1)/2; i++ {
+		for j := -(k.size - 1) / 2; j <= (k.size-1)/2; j++ {
+			sum += int(in.GrayAt(x+i, y+j).Y)
 		}
 	}
 	return sum
